@@ -1,56 +1,27 @@
-import { useEffect, useState } from "react";
-import { db, increment } from "../services/firebase/firebase";
+import axios from "axios";
+import { useState } from "react";
 
-const chatId = "kGlVQMD1GNNnyg5c5mFO";
-//const providerId = "ONGcmIlodOkTI5eyiYpF";
-const clientId = "X8GvRYM8Qiqq0fh31oRf";
-const chatRef = db.collection("chats").doc(chatId);
-
-export function Chat() {
+export function Chat({ ticketId }) {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
-  console.log(messages);
-
-  useEffect(() => {
-    if (chatRef) {
-      const unsubscribe = chatRef
-        .collection("messages")
-        .orderBy("date_time", "desc")
-        .onSnapshot((query) => {
-          const data = query.docs.map((doc) => {
-            return {
-              ...doc.data(),
-              id: doc.id,
-            };
-          });
-
-          setMessages(data);
-        });
-
-      return unsubscribe;
-    }
-  }, []);
 
   const sendNewMessage = async () => {
     if (!newMessage) {
       return;
     }
     const messageData = {
-      message_type: 1,
-      sender: clientId,
-      text: newMessage,
-      date_time: new Date(),
+      content: newMessage,
     };
 
-    const messagesRef = chatRef.collection("messages");
+    const result = await axios.post(
+      `http://localhost:8080/api/tickets/${ticketId}/messages`,
+      messageData
+    );
 
-    await messagesRef.add(messageData);
-
-    const counterRef = messagesRef.doc("--stats--");
-    await counterRef.update({ count: increment });
-    const chatContent = document.getElementById("chat-content");
-    chatContent.scrollTop = chatContent.scrollHeight;
-    setNewMessage("");
+    if (result.status === 200) {
+      const ticket = result.data;
+      setMessages(ticket.messages);
+    }
   };
 
   const handleKeyPress = (event) => {
@@ -69,12 +40,12 @@ export function Chat() {
           <div
             key={message.id}
             className={` w-2/3 max-w-fit  h-max px-3 py-1 rounded-xl ${
-              message.sender === clientId
+              message.senderType === 0
                 ? "rounded-br-none self-end bg-blue-500"
                 : " rounded-bl-none self-start bg-zinc-500"
             }`}
           >
-            <p className="break-words">{message.text}</p>
+            <p className="break-words">{message.content}</p>
           </div>
         ))}
       </div>
