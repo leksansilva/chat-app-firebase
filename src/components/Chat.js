@@ -1,9 +1,35 @@
-import axios from "axios";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { api } from "../services/api";
 
-export function Chat({ ticketId }) {
+export function Chat({ ticketId, onLeaveChat }) {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
+  const scrollbarRef = useRef();
+
+  const getTicketById = (ticketId) => {
+    api.get(`tickets/${ticketId}`).then((response) => {
+      if (response.status === 200) {
+        const ticket = response.data;
+        setMessages((prevState) => {
+          if (prevState.length < ticket.messages.length) {
+            scrollbarRef.current.scrollTo(0, scrollbarRef.current.scrollHeight);
+          }
+          return ticket.messages;
+        });
+      }
+    });
+  };
+
+  useEffect(() => {
+    if (ticketId) {
+      getTicketById(ticketId);
+      const intervalId = setInterval(() => getTicketById(ticketId), 5000);
+
+      return () => {
+        clearInterval(intervalId);
+      };
+    }
+  }, [ticketId]);
 
   const sendNewMessage = async () => {
     if (!newMessage) {
@@ -13,14 +39,14 @@ export function Chat({ ticketId }) {
       content: newMessage,
     };
 
-    const result = await axios.post(
-      `http://localhost:8080/api/tickets/${ticketId}/messages`,
+    const response = await api.post(
+      `/tickets/${ticketId}/messages`,
       messageData
     );
 
-    if (result.status === 200) {
-      const ticket = result.data;
-      setMessages(ticket.messages);
+    if (response.status === 200) {
+      getTicketById(ticketId);
+      setNewMessage("");
     }
   };
 
@@ -31,23 +57,37 @@ export function Chat({ ticketId }) {
   };
 
   return (
-    <div className="h-5/6 w-2/6 bg-slate-300 flex flex-col box-border">
+    <div className="h-screen 5/6 w-[600px] bg-slate-300 flex flex-col box-border">
+      <div className="p-2 flex justify-between">
+        <h1 className="text-lg font-bold">Ticket {ticketId}</h1>
+        <button
+          onClick={onLeaveChat}
+          className=" bg-red-500  text-white py-1 px-2 hover:bg-red-700"
+        >
+          Sair da conversa
+        </button>
+      </div>
       <div
-        id="chat-content"
-        className="flex flex-col-reverse flex-1 bg-zinc-400 text-slate-100 p-5 overflow-auto gap-y-3 scrollbar scroll-smooth"
+        ref={scrollbarRef}
+        className="overflow-y-auto scrollbar scroll-smooth bg-zinc-400 flex-1"
       >
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={` w-2/3 max-w-fit  h-max px-3 py-1 rounded-xl ${
-              message.senderType === 0
-                ? "rounded-br-none self-end bg-blue-500"
-                : " rounded-bl-none self-start bg-zinc-500"
-            }`}
-          >
-            <p className="break-words">{message.content}</p>
-          </div>
-        ))}
+        <div
+          id="chat-content"
+          className="flex flex-col justify-end flex-1  text-slate-100 p-5 gap-y-3   "
+        >
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={` w-2/3 max-w-fit  h-max px-3 py-1 rounded-xl ${
+                message.senderType === 0
+                  ? "rounded-br-none self-end bg-blue-500"
+                  : " rounded-bl-none self-start bg-zinc-500"
+              }`}
+            >
+              <p className="break-words">{message.content}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className=" h-10 flex">
