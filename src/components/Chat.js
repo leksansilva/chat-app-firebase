@@ -1,21 +1,15 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../services/api";
 
 export function Chat({ ticketId, onLeaveChat }) {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
-  const scrollbarRef = useRef();
 
   const getTicketById = (ticketId) => {
     api.get(`tickets/${ticketId}`).then((response) => {
       if (response.status === 200) {
         const ticket = response.data;
-        setMessages((prevState) => {
-          if (prevState.length < ticket.messages.length) {
-            scrollbarRef.current.scrollTo(0, scrollbarRef.current.scrollHeight);
-          }
-          return ticket.messages;
-        });
+        setMessages(ticket.messages);
       }
     });
   };
@@ -67,10 +61,7 @@ export function Chat({ ticketId, onLeaveChat }) {
           Sair da conversa
         </button>
       </div>
-      <div
-        ref={scrollbarRef}
-        className="overflow-y-auto scrollbar scroll-smooth bg-zinc-400 flex-1"
-      >
+      <div className="overflow-y-auto flex flex-col-reverse scrollbar scroll-smooth bg-zinc-400 flex-1">
         <div
           id="chat-content"
           className="flex flex-col justify-end flex-1  text-slate-100 p-5 gap-y-3   "
